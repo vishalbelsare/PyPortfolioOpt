@@ -4,18 +4,24 @@
 
 <!-- buttons -->
 <p align="center">
-    <a href="https://www.python.org/">
-        <img src="https://img.shields.io/badge/python-v3-brightgreen.svg"
+    <a href="https://www.python.org">
+        <img src="https://img.shields.io/pypi/pyversions/PyPortfolioOpt.svg"
             alt="python"></a> &nbsp;
+    <a href="https://www.python.org">
+        <img src="https://img.shields.io/badge/Platforms-linux--64,win--64,osx--64-orange.svg?style=flat-square"
+            alt="platforms"></a> &nbsp;
     <a href="https://pypi.org/project/PyPortfolioOpt/">
-        <img src="https://img.shields.io/badge/pypi-v1.5.2-brightgreen.svg"
+        <img src="https://img.shields.io/badge/pypi-v1.5.5-brightgreen.svg"
             alt="pypi"></a> &nbsp;
     <a href="https://opensource.org/licenses/MIT">
         <img src="https://img.shields.io/badge/license-MIT-brightgreen.svg"
             alt="MIT license"></a> &nbsp;
     <a href="https://github.com/robertmartin8/PyPortfolioOpt/actions">
-        <img src="https://github.com/robertmartin8/PyPortfolioOpt/workflows/pytest/badge.svg?event=push"
+        <img src="https://github.com/robertmartin8/PyPortfolioOpt/workflows/pytest/badge.svg?branch=master"
             alt="build"></a> &nbsp;
+    <a href="https://app.codecov.io/gh/robertmartin8/PyPortfolioOpt">
+        <img src="https://codecov.io/github/robertmartin8/PyPortfolioOpt/coverage.svg?branch=main"
+            alt="codecov"></a> &nbsp;
     <a href="https://pepy.tech/project/pyportfolioopt">
         <img src="https://pepy.tech/badge/pyportfolioopt"
             alt="downloads"></a> &nbsp;
@@ -26,17 +32,18 @@
 
 <!-- content -->
 
-**PyPortfolioOpt has recently been [published](https://joss.theoj.org/papers/10.21105/joss.03066) in the Journal of Open Source Software 🎉**
-
 PyPortfolioOpt is a library that implements portfolio optimization methods, including
 classical mean-variance optimization techniques and Black-Litterman allocation, as well as more
-recent developments in the field like shrinkage and Hierarchical Risk Parity, along with
-some novel experimental features like exponentially-weighted covariance matrices.
+recent developments in the field like shrinkage and Hierarchical Risk Parity.
 
-It is **extensive** yet easily **extensible**, and can be useful for both the casual investor and the serious practitioner. Whether you are a fundamentals-oriented investor who has identified a
+It is **extensive** yet easily **extensible**, and can be useful for either a casual investors, or a professional looking for an easy prototyping tool. Whether you are a fundamentals-oriented investor who has identified a
 handful of undervalued picks, or an algorithmic trader who has a basket of
 strategies, PyPortfolioOpt can help you combine your alpha sources
 in a risk-efficient way.
+
+**PyPortfolioOpt has been [published](https://joss.theoj.org/papers/10.21105/joss.03066) in the Journal of Open Source Software 🎉**
+
+PyPortfolioOpt is now being maintained by [Tuan Tran](https://github.com/88d52bdba0366127fffca9dfa93895).
 
 Head over to the **[documentation on ReadTheDocs](https://pyportfolioopt.readthedocs.io/en/latest/)** to get an in-depth look at the project, or check out the [cookbook](https://github.com/robertmartin8/PyPortfolioOpt/tree/master/cookbook) to see some examples showing the full process from downloading data to building a portfolio.
 
@@ -80,7 +87,7 @@ This project is available on PyPI, meaning that you can just:
 pip install PyPortfolioOpt
 ```
 
-(you may need to follow separate installation instructions for [cvxopt](https://cvxopt.org/install/index.html#) and [cvxpy](https://www.cvxpy.org/install/))).
+(you may need to follow separate installation instructions for [cvxopt](https://cvxopt.org/install/index.html#) and [cvxpy](https://www.cvxpy.org/install/)).
 
 However, it is best practice to use a dependency manager within a virtual environment.
 My current recommendation is to get yourself set up with [poetry](https://github.com/sdispater/poetry) then just run
@@ -418,6 +425,7 @@ Contributions are _most welcome_. Have a look at the [Contribution Guide](https:
 I'd like to thank all of the people who have contributed to PyPortfolioOpt since its release in 2018.
 Special shout-outs to:
 
+-   Tuan Tran (who is now the primary maintainer!)
 -   Philipp Schiele
 -   Carl Peasnell
 -   Felipe Schneider

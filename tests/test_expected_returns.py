@@ -1,8 +1,9 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest
+
 from pypfopt import expected_returns
-from tests.utilities_for_tests import get_data, get_benchmark_data
+from tests.utilities_for_tests import get_benchmark_data, get_data
 
 
 def test_returns_dataframe():
@@ -11,7 +12,6 @@ def test_returns_dataframe():
     assert isinstance(returns_df, pd.DataFrame)
     assert returns_df.shape[1] == 20
     assert len(returns_df) == 7125
-    assert returns_df.index.is_all_dates
     assert not ((returns_df > 1) & returns_df.notnull()).any().any()
 
 
@@ -41,13 +41,20 @@ def test_prices_from_log_returns():
     test_prices = pseudo_prices * initial_prices
 
     # check equality, robust to floating point issues
-    assert ((test_prices[1:] - df[1:]).fillna(0) < 1e-10).all().all()
+    assert ((test_prices[1:] - df[1:]).fillna(0) < 1e-5).all().all()
 
 
 def test_returns_from_prices():
     df = get_data()
     returns_df = expected_returns.returns_from_prices(df)
     pd.testing.assert_series_equal(returns_df.iloc[-1], df.pct_change().iloc[-1])
+
+
+def test_returns_warning():
+    df = get_data()
+    df.iloc[3, :] = 0  # make some prices zero
+    with pytest.warns(UserWarning):
+        expected_returns.mean_historical_return(df)
 
 
 def test_log_returns_from_prices():

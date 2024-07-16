@@ -2,15 +2,13 @@
 The ``efficient_frontier`` submodule houses the EfficientFrontier class, which generates
 classical mean-variance optimal portfolios for a variety of objectives and constraints
 """
-import copy
 import warnings
 
+import cvxpy as cp
 import numpy as np
 import pandas as pd
-import cvxpy as cp
 
-from .. import exceptions
-from .. import objective_functions, base_optimizer
+from .. import base_optimizer, exceptions, objective_functions
 
 
 class EfficientFrontier(base_optimizer.BaseConvexOptimizer):
@@ -84,10 +82,8 @@ class EfficientFrontier(base_optimizer.BaseConvexOptimizer):
         :raises TypeError: if ``cov_matrix`` is not a dataframe or array
         """
         # Inputs
-        self.cov_matrix = EfficientFrontier._validate_cov_matrix(cov_matrix)
-        self.expected_returns = EfficientFrontier._validate_expected_returns(
-            expected_returns
-        )
+        self.cov_matrix = self._validate_cov_matrix(cov_matrix)
+        self.expected_returns = self._validate_expected_returns(expected_returns)
         self._max_return_value = None
         self._market_neutral = None
 
@@ -244,6 +240,12 @@ class EfficientFrontier(base_optimizer.BaseConvexOptimizer):
         """
         if not isinstance(risk_free_rate, (int, float)):
             raise ValueError("risk_free_rate should be numeric")
+
+        if max(self.expected_returns) <= risk_free_rate:
+            raise ValueError(
+                "at least one of the assets must have an expected return exceeding the risk-free rate"
+            )
+
         self._risk_free_rate = risk_free_rate
 
         # max_sharpe requires us to make a variable transformation.
@@ -346,7 +348,7 @@ class EfficientFrontier(base_optimizer.BaseConvexOptimizer):
         if not isinstance(target_volatility, (float, int)) or target_volatility < 0:
             raise ValueError("target_volatility should be a positive float")
 
-        global_min_volatility = np.sqrt(1 / np.sum(np.linalg.inv(self.cov_matrix)))
+        global_min_volatility = np.sqrt(1 / np.sum(np.linalg.pinv(self.cov_matrix)))
 
         if target_volatility < global_min_volatility:
             raise ValueError(
@@ -358,7 +360,7 @@ class EfficientFrontier(base_optimizer.BaseConvexOptimizer):
         update_existing_parameter = self.is_parameter_defined("target_variance")
         if update_existing_parameter:
             self._validate_market_neutral(market_neutral)
-            self.update_parameter_value("target_variance", target_volatility ** 2)
+            self.update_parameter_value("target_variance", target_volatility**2)
         else:
             self._objective = objective_functions.portfolio_return(
                 self._w, self.expected_returns
@@ -369,7 +371,7 @@ class EfficientFrontier(base_optimizer.BaseConvexOptimizer):
                 self._objective += obj
 
             target_variance = cp.Parameter(
-                name="target_variance", value=target_volatility ** 2, nonneg=True
+                name="target_variance", value=target_volatility**2, nonneg=True
             )
             self.add_constraint(lambda _: variance <= target_variance)
             self._make_weight_sum_constraint(market_neutral)
@@ -389,10 +391,11 @@ class EfficientFrontier(base_optimizer.BaseConvexOptimizer):
         :return: asset weights for the Markowitz portfolio
         :rtype: OrderedDict
         """
-        if not isinstance(target_return, float) or target_return < 0:
-            raise ValueError("target_return should be a positive float")
+        if not isinstance(target_return, float):
+            raise ValueError("target_return should be a float")
         if not self._max_return_value:
-            self._max_return_value = copy.deepcopy(self)._max_return()
+            a = self.deepcopy()
+            self._max_return_value = a._max_return()
         if target_return > self._max_return_value:
             raise ValueError(
                 "target_return must be lower than the maximum possible return"
@@ -429,7 +432,7 @@ class EfficientFrontier(base_optimizer.BaseConvexOptimizer):
                                The period of the risk-free rate should correspond to the
                                frequency of expected returns.
         :type risk_free_rate: float, optional
-        :raises ValueError: if weights have not been calcualted yet
+        :raises ValueError: if weights have not been calculated yet
         :return: expected return, volatility, Sharpe ratio.
         :rtype: (float, float, float)
         """

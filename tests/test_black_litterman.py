@@ -2,9 +2,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pypfopt import black_litterman
-from pypfopt.black_litterman import BlackLittermanModel
-from pypfopt import risk_models, expected_returns
+from pypfopt import expected_returns, risk_models
+from pypfopt.black_litterman import (
+    BlackLittermanModel,
+    market_implied_prior_returns,
+    market_implied_risk_aversion,
+)
 from tests.utilities_for_tests import get_data, get_market_caps, resource
 
 
@@ -239,20 +242,20 @@ def test_bl_cov_default():
 
 def test_market_risk_aversion():
     prices = pd.read_csv(
-        resource("spy_prices.csv"), parse_dates=True, index_col=0, squeeze=True
-    )
-    delta = black_litterman.market_implied_risk_aversion(prices)
+        resource("spy_prices.csv"), parse_dates=True, index_col=0
+    ).squeeze("columns")
+    delta = market_implied_risk_aversion(prices)
     assert np.round(delta, 5) == 2.68549
 
     # check it works for df
     prices = pd.read_csv(resource("spy_prices.csv"), parse_dates=True, index_col=0)
-    delta = black_litterman.market_implied_risk_aversion(prices)
+    delta = market_implied_risk_aversion(prices)
     assert np.round(delta.iloc[0], 5) == 2.68549
 
     # Check it raises for other types.
     list_invalid = [100.0, 110.0, 120.0, 130.0]
     with pytest.raises(TypeError):
-        delta = black_litterman.market_implied_risk_aversion(list_invalid)
+        delta = market_implied_risk_aversion(list_invalid)
 
 
 def test_bl_weights():
@@ -263,10 +266,10 @@ def test_bl_weights():
     bl = BlackLittermanModel(S, absolute_views=viewdict)
 
     prices = pd.read_csv(
-        resource("spy_prices.csv"), parse_dates=True, index_col=0, squeeze=True
-    )
+        resource("spy_prices.csv"), parse_dates=True, index_col=0
+    ).squeeze("columns")
 
-    delta = black_litterman.market_implied_risk_aversion(prices)
+    delta = market_implied_risk_aversion(prices)
     bl.bl_weights(delta)
     w = bl.clean_weights()
     assert abs(sum(w.values()) - 1) < 1e-5
@@ -316,12 +319,12 @@ def test_market_implied_prior():
     S = risk_models.sample_cov(df)
 
     prices = pd.read_csv(
-        resource("spy_prices.csv"), parse_dates=True, index_col=0, squeeze=True
-    )
-    delta = black_litterman.market_implied_risk_aversion(prices)
+        resource("spy_prices.csv"), parse_dates=True, index_col=0
+    ).squeeze("columns")
+    delta = market_implied_risk_aversion(prices)
 
     mcaps = get_market_caps()
-    pi = black_litterman.market_implied_prior_returns(mcaps, delta, S)
+    pi = market_implied_prior_returns(mcaps, delta, S)
     assert isinstance(pi, pd.Series)
     assert list(pi.index) == list(df.columns)
     assert pi.notnull().all()
@@ -355,7 +358,7 @@ def test_market_implied_prior():
     )
 
     mcaps = pd.Series(mcaps)
-    pi2 = black_litterman.market_implied_prior_returns(mcaps, delta, S)
+    pi2 = market_implied_prior_returns(mcaps, delta, S)
     pd.testing.assert_series_equal(pi, pi2, check_exact=False)
 
     # Test alternate syntax
@@ -366,7 +369,7 @@ def test_market_implied_prior():
         absolute_views={"AAPL": 0.1},
         risk_aversion=delta,
     )
-    pi = black_litterman.market_implied_prior_returns(mcaps, delta, S, risk_free_rate=0)
+    pi = market_implied_prior_returns(mcaps, delta, S, risk_free_rate=0)
     np.testing.assert_array_almost_equal(bl.pi, pi.values.reshape(-1, 1))
 
 
@@ -375,17 +378,17 @@ def test_bl_market_prior():
     S = risk_models.sample_cov(df)
 
     prices = pd.read_csv(
-        resource("spy_prices.csv"), parse_dates=True, index_col=0, squeeze=True
-    )
+        resource("spy_prices.csv"), parse_dates=True, index_col=0
+    ).squeeze("columns")
 
-    delta = black_litterman.market_implied_risk_aversion(prices)
+    delta = market_implied_risk_aversion(prices)
 
     mcaps = get_market_caps()
 
     with pytest.warns(RuntimeWarning):
-        black_litterman.market_implied_prior_returns(mcaps, delta, S.values)
+        market_implied_prior_returns(mcaps, delta, S.values)
 
-    prior = black_litterman.market_implied_prior_returns(mcaps, delta, S)
+    prior = market_implied_prior_returns(mcaps, delta, S)
 
     viewdict = {"GOOG": 0.40, "AAPL": -0.30, "FB": 0.30, "BABA": 0}
     bl = BlackLittermanModel(S, pi=prior, absolute_views=viewdict)
@@ -419,7 +422,7 @@ def test_bl_market_automatic():
     rets = bl.bl_returns()
 
     # Compare with explicit
-    prior = black_litterman.market_implied_prior_returns(mcaps, 1, S, 0)
+    prior = market_implied_prior_returns(mcaps, 1, S, 0)
     bl2 = BlackLittermanModel(S, pi=prior, absolute_views=viewdict)
     rets2 = bl2.bl_returns()
     pd.testing.assert_series_equal(rets, rets2)
@@ -432,8 +435,8 @@ def test_bl_market_automatic():
 #     mcaps2 = {k: v for k, v in list(mcaps.items())[::-1]}
 #     # mcaps = pd.Series(mcaps)
 
-#     market_prior1 = black_litterman.market_implied_prior_returns(mcaps, 2, S.values, 0)
-#     market_prior2 = black_litterman.market_implied_prior_returns(mcaps2, 2, S.values, 0)
+#     market_prior1 = market_implied_prior_returns(mcaps, 2, S.values, 0)
+#     market_prior2 = market_implied_prior_returns(mcaps2, 2, S.values, 0)
 #     market_prior1 == market_prior2
 
 #     mcaps = pd.Series(mcaps)
@@ -468,13 +471,13 @@ def test_bl_tau():
     S = risk_models.sample_cov(df)
 
     prices = pd.read_csv(
-        resource("spy_prices.csv"), parse_dates=True, index_col=0, squeeze=True
-    )
+        resource("spy_prices.csv"), parse_dates=True, index_col=0
+    ).squeeze("columns")
 
-    delta = black_litterman.market_implied_risk_aversion(prices)
+    delta = market_implied_risk_aversion(prices)
 
     mcaps = get_market_caps()
-    prior = black_litterman.market_implied_prior_returns(mcaps, delta, S)
+    prior = market_implied_prior_returns(mcaps, delta, S)
 
     viewdict = {"GOOG": 0.40, "AAPL": -0.30, "FB": 0.30, "BABA": 0}
 
@@ -512,7 +515,7 @@ def test_bl_no_uncertainty():
     for k, v in viewdict.items():
         assert np.abs(rets[k] - v) < 1e-5
 
-    # If only one view has 100% confidencee, only that asset will have post = prior.
+    # If only one view has 100% confidence, only that asset will have post = prior.
     omega = np.diag([0, 0.2, 0.2, 0.2])
     bl = BlackLittermanModel(S, absolute_views=viewdict, omega=omega)
     rets = bl.bl_returns()

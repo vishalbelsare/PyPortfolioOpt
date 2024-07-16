@@ -7,18 +7,18 @@ Additionally, we define a general utility function ``portfolio_performance`` to
 evaluate return and risk for a given set of portfolio weights.
 """
 import collections
+import copy
 import json
 import warnings
 from collections.abc import Iterable
 from typing import List
 
+import cvxpy as cp
 import numpy as np
 import pandas as pd
-import cvxpy as cp
 import scipy.optimize as sco
 
-from . import objective_functions
-from . import exceptions
+from . import exceptions, objective_functions
 
 
 class BaseOptimizer:
@@ -163,7 +163,7 @@ class BaseConvexOptimizer(BaseOptimizer):
                               for portfolios with shorting.
         :type weight_bounds: tuple OR tuple list, optional
         :param solver: name of solver. list available solvers with: ``cvxpy.installed_solvers()``
-        :type solver: str, optional. Defaults to "ECOS"
+        :type solver: str, optional.
         :param verbose: whether performance and debugging info should be printed, defaults to False
         :type verbose: bool, optional
         :param solver_options: parameters for the given solver
@@ -183,6 +183,20 @@ class BaseConvexOptimizer(BaseOptimizer):
         self._verbose = verbose
         self._solver_options = solver_options if solver_options else {}
         self._map_bounds_to_constraints(weight_bounds)
+
+    def deepcopy(self):
+        """
+        Returns a custom deep copy of the optimizer. This is necessary because
+        ``cvxpy`` expressions do not support deepcopy, but the mutable arguments need to be
+        copied to avoid unintended side effects. Instead, we create a shallow copy
+        of the optimizer and then manually copy the mutable arguments.
+        """
+        self_copy = copy.copy(self)
+        self_copy._additional_objectives = [
+            copy.copy(obj) for obj in self_copy._additional_objectives
+        ]
+        self_copy._constraints = [copy.copy(con) for con in self_copy._constraints]
+        return self_copy
 
     def _map_bounds_to_constraints(self, test_bounds):
         """
@@ -206,8 +220,7 @@ class BaseConvexOptimizer(BaseOptimizer):
             # Otherwise this must be a pair.
             if len(test_bounds) != 2 or not isinstance(test_bounds, (tuple, list)):
                 raise TypeError(
-                    "test_bounds must be a pair (lower bound, upper bound) "
-                    "OR a collection of bounds for each asset"
+                    "test_bounds must be a pair (lower bound, upper bound) OR a collection of bounds for each asset"
                 )
             lower, upper = test_bounds
 
@@ -383,10 +396,10 @@ class BaseConvexOptimizer(BaseOptimizer):
                 "Sector constraints may not produce reasonable results if shorts are allowed."
             )
         for sector in sector_upper:
-            is_sector = [sector_mapper[t] == sector for t in self.tickers]
+            is_sector = [sector_mapper.get(t) == sector for t in self.tickers]
             self.add_constraint(lambda w: cp.sum(w[is_sector]) <= sector_upper[sector])
         for sector in sector_lower:
-            is_sector = [sector_mapper[t] == sector for t in self.tickers]
+            is_sector = [sector_mapper.get(t) == sector for t in self.tickers]
             self.add_constraint(lambda w: cp.sum(w[is_sector]) >= sector_lower[sector])
 
     def convex_objective(self, custom_objective, weights_sum_to_one=True, **kwargs):
@@ -515,7 +528,7 @@ def portfolio_performance(
     :type verbose: bool, optional
     :param risk_free_rate: risk-free rate of borrowing/lending, defaults to 0.02
     :type risk_free_rate: float, optional
-    :raises ValueError: if weights have not been calcualted yet
+    :raises ValueError: if weights have not been calculated yet
     :return: expected return, volatility, Sharpe ratio.
     :rtype: (float, float, float)
     """
@@ -578,10 +591,10 @@ def _get_all_args(expression: cp.Expression) -> List[cp.Expression]:
         return list(_flatten([_get_all_args(arg) for arg in expression.args]))
 
 
-def _flatten(l: Iterable) -> Iterable:
+def _flatten(alist: Iterable) -> Iterable:
     # Helper method to flatten an iterable
-    for el in l:
-        if isinstance(el, Iterable) and not isinstance(el, (str, bytes)):
-            yield from _flatten(el)
+    for v in alist:
+        if isinstance(v, Iterable) and not isinstance(v, (str, bytes)):
+            yield from _flatten(v)
         else:
-            yield el
+            yield v

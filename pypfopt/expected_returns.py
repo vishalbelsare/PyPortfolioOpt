@@ -21,8 +21,21 @@ Additionally, we provide utility functions to convert from returns to prices and
 """
 
 import warnings
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+
+
+def _check_returns(returns):
+    # Check NaNs excluding leading NaNs
+    if np.any(np.isnan(returns.mask(returns.ffill().isnull(), 0))):
+        warnings.warn(
+            "Some returns are NaN. Please check your price data.", UserWarning
+        )
+    if np.any(np.isinf(returns)):
+        warnings.warn(
+            "Some returns are infinite. Please check your price data.", UserWarning
+        )
 
 
 def returns_from_prices(prices, log_returns=False):
@@ -38,9 +51,10 @@ def returns_from_prices(prices, log_returns=False):
     :rtype: pd.DataFrame
     """
     if log_returns:
-        return np.log(1 + prices.pct_change()).dropna(how="all")
+        returns = np.log(1 + prices.pct_change()).dropna(how="all")
     else:
-        return prices.pct_change().dropna(how="all")
+        returns = prices.pct_change().dropna(how="all")
+    return returns
 
 
 def prices_from_returns(returns, log_returns=False):
@@ -126,6 +140,8 @@ def mean_historical_return(
         returns = prices
     else:
         returns = returns_from_prices(prices, log_returns)
+
+    _check_returns(returns)
     if compounding:
         return (1 + returns).prod() ** (frequency / returns.count()) - 1
     else:
@@ -172,6 +188,7 @@ def ema_historical_return(
     else:
         returns = returns_from_prices(prices, log_returns)
 
+    _check_returns(returns)
     if compounding:
         return (1 + returns.ewm(span=span).mean().iloc[-1]) ** frequency - 1
     else:
@@ -231,7 +248,12 @@ def capm_return(
             market_returns = market_prices
     else:
         returns = returns_from_prices(prices, log_returns)
+
         if market_prices is not None:
+            if not isinstance(market_prices, pd.DataFrame):
+                warnings.warn("market prices are not in a dataframe", RuntimeWarning)
+                market_prices = pd.DataFrame(market_prices)
+
             market_returns = returns_from_prices(market_prices, log_returns)
     # Use the equally-weighted dataset as a proxy for the market
     if market_returns is None:
@@ -240,6 +262,8 @@ def capm_return(
     else:
         market_returns.columns = ["mkt"]
         returns = returns.join(market_returns, how="left")
+
+    _check_returns(returns)
 
     # Compute covariance matrix for the new dataframe (including markets)
     cov = returns.cov()

@@ -157,7 +157,7 @@ EfficientCDaR
 ==============
 
 The **conditional drawdown at risk** (CDaR) is a more exotic measure of tail risk. It tries to alleviate the problems
-with Efficient Semivariance and Efficient CvAr in that it accounts for the timespan of material decreases in value. The CDaR can be
+with Efficient Semivariance and Efficient CVaR in that it accounts for the timespan of material decreases in value. The CDaR can be
 thought of as the average of losses that occur on "very bad periods", where "very bad" is quantified by the parameter
 :math:`\beta`. The drawdown is defined as the difference in non-compounded return to the previous peak.
 
@@ -200,7 +200,7 @@ in anything related to ``max_sharpe()``, ``min_volatility()``, ``efficient_risk(
 set up a completely new problem to optimize for some custom objective?
 
 For example, perhaps our objective is to construct a basket of assets that best replicates a
-particular index, in otherwords, to minimise the **tracking error**. This does not fit within
+particular index, in other words, to minimise the **tracking error**. This does not fit within
 a mean-variance optimization paradigm, but we can still implement it in PyPortfolioOpt::
 
     from pypfopt.base_optimizer import BaseConvexOptimizer

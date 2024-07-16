@@ -4,8 +4,9 @@ generates portfolios along the mean-CVaR frontier.
 """
 
 import warnings
-import numpy as np
+
 import cvxpy as cp
+import numpy as np
 
 from .. import objective_functions
 from .efficient_frontier import EfficientFrontier
@@ -88,6 +89,9 @@ class EfficientCVaR(EfficientFrontier):
         self._beta = self._validate_beta(beta)
         self._alpha = cp.Variable()
         self._u = cp.Variable(len(self.returns))
+
+    def set_weights(self, input_weights):
+        raise NotImplementedError("Method not available in EfficientCVaR.")
 
     @staticmethod
     def _validate_beta(beta):
@@ -220,7 +224,7 @@ class EfficientCVaR(EfficientFrontier):
 
         :param verbose: whether performance should be printed, defaults to False
         :type verbose: bool, optional
-        :raises ValueError: if weights have not been calcualted yet
+        :raises ValueError: if weights have not been calculated yet
         :return: expected return, CVaR.
         :rtype: (float, float)
         """

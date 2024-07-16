@@ -8,19 +8,18 @@ Currently implemented:
   - ``plot_efficient_frontier`` – plot the efficient frontier from an EfficientFrontier or CLA object
   - ``plot_weights`` - bar chart of weights
 """
-import copy
-import numpy as np
-from . import risk_models, exceptions
-from . import EfficientFrontier, CLA
-import scipy.cluster.hierarchy as sch
 import warnings
 
-try:
-    import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.cluster.hierarchy as sch
 
-    plt.style.use("seaborn-deep")
-except (ModuleNotFoundError, ImportError):  # pragma: no cover
-    raise ImportError("Please install matplotlib via pip or poetry")
+from . import CLA, EfficientFrontier, exceptions, risk_models
+
+try:
+    plt.style.use("seaborn-v0_8-deep")
+except Exception:  # pragma: no cover
+    pass
 
 
 def _plot_io(**kwargs):
@@ -102,7 +101,7 @@ def plot_dendrogram(hrp, ax=None, show_tickers=True, **kwargs):
 
     if hrp.clusters is None:
         warnings.warn(
-            "hrp param has not been optimized.  Attempting optimization.",
+            "hrp param has not been optimized. Attempting optimization.",
             RuntimeWarning,
         )
         hrp.optimize()
@@ -119,7 +118,7 @@ def plot_dendrogram(hrp, ax=None, show_tickers=True, **kwargs):
     return ax
 
 
-def _plot_cla(cla, points, ax, show_assets):
+def _plot_cla(cla, points, ax, show_assets, show_tickers):
     """
     Helper function to plot the efficient frontier from a CLA object
     """
@@ -135,14 +134,19 @@ def _plot_cla(cla, points, ax, show_assets):
     ax.plot(sigmas, mus, label="Efficient frontier")
     ax.scatter(optimal_risk, optimal_ret, marker="x", s=100, color="r", label="optimal")
 
+    asset_mu = cla.expected_returns
+    asset_sigma = np.sqrt(np.diag(cla.cov_matrix))
     if show_assets:
         ax.scatter(
-            np.sqrt(np.diag(cla.cov_matrix)),
-            cla.expected_returns,
+            asset_sigma,
+            asset_mu,
             s=30,
             color="k",
             label="assets",
         )
+        if show_tickers:
+            for i, label in enumerate(cla.tickers):
+                ax.annotate(label, (asset_sigma[i], asset_mu[i]))
     return ax
 
 
@@ -151,8 +155,8 @@ def _ef_default_returns_range(ef, points):
     Helper function to generate a range of returns from the GMV returns to
     the maximum (constrained) returns
     """
-    ef_minvol = copy.deepcopy(ef)
-    ef_maxret = copy.deepcopy(ef)
+    ef_minvol = ef.deepcopy()
+    ef_maxret = ef.deepcopy()
 
     ef_minvol.min_volatility()
     min_ret = ef_minvol.portfolio_performance()[0]
@@ -160,7 +164,7 @@ def _ef_default_returns_range(ef, points):
     return np.linspace(min_ret, max_ret - 0.0001, points)
 
 
-def _plot_ef(ef, ef_param, ef_param_range, ax, show_assets):
+def _plot_ef(ef, ef_param, ef_param_range, ax, show_assets, show_tickers):
     """
     Helper function to plot the efficient frontier from an EfficientFrontier object
     """
@@ -194,14 +198,19 @@ def _plot_ef(ef, ef_param, ef_param_range, ax, show_assets):
 
     ax.plot(sigmas, mus, label="Efficient frontier")
 
+    asset_mu = ef.expected_returns
+    asset_sigma = np.sqrt(np.diag(ef.cov_matrix))
     if show_assets:
         ax.scatter(
-            np.sqrt(np.diag(ef.cov_matrix)),
-            ef.expected_returns,
+            asset_sigma,
+            asset_mu,
             s=30,
             color="k",
             label="assets",
         )
+        if show_tickers:
+            for i, label in enumerate(ef.tickers):
+                ax.annotate(label, (asset_sigma[i], asset_mu[i]))
     return ax
 
 
@@ -212,6 +221,7 @@ def plot_efficient_frontier(
     points=100,
     ax=None,
     show_assets=True,
+    show_tickers=False,
     **kwargs
 ):
     """
@@ -230,6 +240,8 @@ def plot_efficient_frontier(
     :type points: int, optional
     :param show_assets: whether we should plot the asset risks/returns also, defaults to True
     :type show_assets: bool, optional
+    :param show_tickers: whether we should annotate each asset with its ticker, defaults to False
+    :type show_tickers: bool, optional
     :param filename: name of the file to save to, defaults to None (doesn't save)
     :type filename: str, optional
     :param showfig: whether to plt.show() the figure, defaults to False
@@ -240,12 +252,21 @@ def plot_efficient_frontier(
     ax = ax or plt.gca()
 
     if isinstance(opt, CLA):
-        ax = _plot_cla(opt, points, ax=ax, show_assets=show_assets)
+        ax = _plot_cla(
+            opt, points, ax=ax, show_assets=show_assets, show_tickers=show_tickers
+        )
     elif isinstance(opt, EfficientFrontier):
         if ef_param_range is None:
             ef_param_range = _ef_default_returns_range(opt, points)
 
-        ax = _plot_ef(opt, ef_param, ef_param_range, ax=ax, show_assets=show_assets)
+        ax = _plot_ef(
+            opt,
+            ef_param,
+            ef_param_range,
+            ax=ax,
+            show_assets=show_assets,
+            show_tickers=show_tickers,
+        )
     else:
         raise NotImplementedError("Please pass EfficientFrontier or CLA object")
 

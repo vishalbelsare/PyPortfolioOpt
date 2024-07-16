@@ -4,8 +4,9 @@ generates portfolios along the mean-CDaR (conditional drawdown-at-risk) frontier
 """
 
 import warnings
-import numpy as np
+
 import cvxpy as cp
+import numpy as np
 
 from .. import objective_functions
 from .efficient_frontier import EfficientFrontier
@@ -89,7 +90,11 @@ class EfficientCDaR(EfficientFrontier):
         self._u = cp.Variable(len(self.returns) + 1)
         self._z = cp.Variable(len(self.returns))
 
-    def _validate_beta(self, beta):
+    def set_weights(self, input_weights):
+        raise NotImplementedError("Method not available in EfficientCDaR.")
+
+    @staticmethod
+    def _validate_beta(beta):
         if not (0 <= beta < 1):
             raise ValueError("beta must be between 0 and 1")
         if beta <= 0.2:
@@ -212,7 +217,7 @@ class EfficientCDaR(EfficientFrontier):
 
         :param verbose: whether performance should be printed, defaults to False
         :type verbose: bool, optional
-        :raises ValueError: if weights have not been calcualted yet
+        :raises ValueError: if weights have not been calculated yet
         :return: expected return, CDaR.
         :rtype: (float, float)
         """
